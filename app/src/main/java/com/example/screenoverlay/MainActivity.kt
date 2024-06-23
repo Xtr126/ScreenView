@@ -52,6 +52,6 @@ class MainActivity : Activity(), View.OnTouchListener {
         if (view.display.displayId != Display.DEFAULT_DISPLAY) {
             Input.injectInputEvent(event)
         }
-        return super.onTouchEvent(event)
+        view.onTouchEvent(event);
     }
 }
