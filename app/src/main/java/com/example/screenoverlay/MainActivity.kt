@@ -51,7 +51,8 @@ class MainActivity : Activity(), View.OnTouchListener {
         // Check if we are on a secondary display
         if (view.display.displayId != Display.DEFAULT_DISPLAY) {
             Input.injectInputEvent(event)
+            return true
         }
-        view.onTouchEvent(event);
+        return false
     }
 }
