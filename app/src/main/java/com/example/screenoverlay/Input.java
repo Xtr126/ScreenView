@@ -2,6 +2,7 @@ package com.example.screenoverlay;
 
 import android.os.Build;
 import android.util.Log;
+import android.view.Display;
 import android.view.MotionEvent;
 
 import java.lang.reflect.InvocationTargetException;
@@ -33,14 +34,9 @@ public class Input {
 
             inputManager = inputManagerClass.getDeclaredMethod(methodName)
                     .invoke(null, objArr);
-            //Make MotionEvent.obtain() method accessible
-            methodName = "obtain";
-            MotionEvent.class.getDeclaredMethod(methodName)
-                    .setAccessible(true);
 
-            //Get the reference to injectInputEvent method
+            // Get the reference to injectInputEvent method
             methodName = "injectInputEvent";
-
             injectInputEventMethod = inputManagerClass.getMethod(methodName, android.view.InputEvent.class, Integer.TYPE);
 
         } catch (Exception e) {
