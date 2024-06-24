@@ -8,17 +8,21 @@ import android.hardware.display.DisplayManager
 import android.hardware.display.DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR
 import android.hardware.display.VirtualDisplay
 import android.os.Bundle
+import android.preference.PreferenceManager
+import android.util.Log
 import android.view.Display
 import android.view.MotionEvent
 import android.view.Surface
 import android.view.TextureView
 import android.view.View
 import android.view.ViewGroup
+import com.example.screenoverlay.Input.TAG
 
 class MainActivity : Activity(), View.OnTouchListener, TextureView.SurfaceTextureListener {
     private var displayRealHeight: Int = 0
     private var displayRealWidth: Int = 0
     private lateinit var view: TextureView
+    private var useInput = false
     private var virtualDisplay: VirtualDisplay? = null
 
     override fun onDestroy() {
@@ -33,11 +37,15 @@ class MainActivity : Activity(), View.OnTouchListener, TextureView.SurfaceTextur
         setContentView(view)
         view.setOnTouchListener(this)
         view.surfaceTextureListener = this
+
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
+        useInput = sharedPreferences.getBoolean("use_input", false)
+        Log.i(TAG, "Input enabled: $useInput")
     }
 
     private fun getDisplayMetrics() {
         val outSize = Point()
-        view.display.getRealSize(outSize);
+        view.display.getRealSize(outSize)
         displayRealWidth = outSize.x
         displayRealHeight = outSize.y
     }
@@ -45,10 +53,10 @@ class MainActivity : Activity(), View.OnTouchListener, TextureView.SurfaceTextur
     override fun onTouch(v: View?, event: MotionEvent?): Boolean {
         // Check if we are on a secondary display
         if (view.display.displayId != Display.DEFAULT_DISPLAY &&
-            event != null) {
+            event != null && useInput) {
             val x = event.x / view.width * displayRealWidth
             val y = event.y / view.height * displayRealHeight
-            val e: MotionEvent = MotionEvent.obtain(event.downTime, event.eventTime, event.action, x, y, event.pressure, event.size, event.metaState, event.xPrecision, event.yPrecision, event.deviceId, event.edgeFlags);
+            val e: MotionEvent = MotionEvent.obtain(event.downTime, event.eventTime, event.action, x, y, event.pressure, event.size, event.metaState, event.xPrecision, event.yPrecision, event.deviceId, event.edgeFlags)
             Input.injectInputEvent(e)
             return true
         }

@@ -1,0 +1,12 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+
+    <PreferenceCategory
+        android:title="Settings">
+        <SwitchPreference
+            android:key="use_input"
+            android:title="Enable input"
+            android:defaultValue="false"/>
+    </PreferenceCategory>
+
+</PreferenceScreen>
