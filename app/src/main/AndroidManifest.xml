@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:ignore="ProtectedPermissions,QueryAllPackagesPermission" >
 
-    <uses-permission android:name="android.permission.MANAGE_MEDIA_PROJECTION" />
+    <uses-permission android:name="android.permission.CAPTURE_SECURE_VIDEO_OUTPUT" />
     <uses-permission android:name="android.permission.INJECT_EVENTS" />
 
     <uses-sdk
