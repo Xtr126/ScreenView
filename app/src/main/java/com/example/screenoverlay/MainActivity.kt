@@ -1,7 +1,6 @@
 package com.example.screenoverlay
 
 import android.app.Activity
-import android.content.Context
 import android.graphics.Point
 import android.graphics.SurfaceTexture
 import android.hardware.display.DisplayManager
@@ -12,18 +11,22 @@ import android.preference.PreferenceManager
 import android.util.Log
 import android.view.Display
 import android.view.MotionEvent
+import android.view.MotionEvent.PointerCoords
+import android.view.MotionEvent.PointerProperties
 import android.view.Surface
 import android.view.TextureView
 import android.view.View
-import android.view.ViewGroup
-import com.example.screenoverlay.Input.TAG
+import android.widget.LinearLayout
 
 class MainActivity : Activity(), View.OnTouchListener, TextureView.SurfaceTextureListener {
+    private lateinit var displayManager: DisplayManager
     private var displayRealHeight: Int = 0
     private var displayRealWidth: Int = 0
     private lateinit var view: TextureView
     private var useInput = false
     private var virtualDisplay: VirtualDisplay? = null
+    val TAG: String = "main_activity"
+
 
     override fun onDestroy() {
         super.onDestroy()
@@ -32,9 +35,8 @@ class MainActivity : Activity(), View.OnTouchListener, TextureView.SurfaceTextur
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        view = TextureView(this)
-        view.layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-        setContentView(view)
+        setContentView(R.layout.main_activity)
+        view = findViewById(R.id.textureView)
         view.setOnTouchListener(this)
         view.surfaceTextureListener = this
 
@@ -43,9 +45,16 @@ class MainActivity : Activity(), View.OnTouchListener, TextureView.SurfaceTextur
         Log.i(TAG, "Input enabled: $useInput")
     }
 
+    override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
+        getDisplayMetrics()
+        updateTextureViewSize(width, height)
+        virtualDisplay = displayManager.createVirtualDisplay("screenview", view.layoutParams.width, view.layoutParams.height, 160, Surface(surface), VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR)
+    }
+
     private fun getDisplayMetrics() {
+        displayManager = getSystemService(DISPLAY_SERVICE) as DisplayManager
         val outSize = Point()
-        view.display.getRealSize(outSize)
+        displayManager.getDisplay(Display.DEFAULT_DISPLAY).getRealSize(outSize)
         displayRealWidth = outSize.x
         displayRealHeight = outSize.y
     }
@@ -54,19 +63,61 @@ class MainActivity : Activity(), View.OnTouchListener, TextureView.SurfaceTextur
         // Check if we are on a secondary display
         if (view.display.displayId != Display.DEFAULT_DISPLAY &&
             event != null && useInput) {
-            val x = event.x / view.width * displayRealWidth
-            val y = event.y / view.height * displayRealHeight
-            val e: MotionEvent = MotionEvent.obtain(event.downTime, event.eventTime, event.action, x, y, event.pressure, event.size, event.metaState, event.xPrecision, event.yPrecision, event.deviceId, event.edgeFlags)
-            Input.injectInputEvent(e)
+            Input.injectInputEvent(transformEvent(event))
             return true
         }
         return false
     }
 
-    override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
-        getDisplayMetrics()
-        val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
-        virtualDisplay = displayManager.createVirtualDisplay("screenview", view.width, view.height, 160, Surface(surface), VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR)
+    private fun transformEvent(event: MotionEvent): MotionEvent {
+        val pointerProperties = arrayOfNulls<PointerProperties>(event.pointerCount)
+        val pointerCoords = arrayOfNulls<PointerCoords>(event.pointerCount)
+        for (i in 0..<event.pointerCount) {
+            pointerProperties[i] = PointerProperties()
+            pointerCoords[i] = PointerCoords()
+            event.getPointerProperties(i, pointerProperties[i])
+            event.getPointerCoords(i, pointerCoords[i])
+            pointerCoords[i]!!.x = pointerCoords[i]!!.x / view.width * displayRealWidth
+            pointerCoords[i]!!.y = pointerCoords[i]!!.y / view.height * displayRealHeight
+        }
+        return MotionEvent.obtain(
+            event.downTime,
+            event.eventTime,
+            event.action,
+            event.pointerCount,
+            pointerProperties,
+            pointerCoords,
+            event.metaState,
+            event.buttonState,
+            event.xPrecision,
+            event.yPrecision,
+            event.deviceId,
+            event.edgeFlags,
+            event.source,
+            event.flags
+        )
+    }
+
+    private fun updateTextureViewSize(maxWidth: Int, maxHeight: Int) {
+        Log.i(TAG, "display width: $displayRealWidth")
+        Log.i(TAG, "display height: $displayRealHeight")
+        val screenRatio =  displayRealWidth.toDouble() / displayRealHeight
+        val viewRatio = maxWidth.toDouble() / maxHeight
+        Log.i(TAG, "viewratio: $viewRatio")
+        Log.i(TAG, "screenratio: $screenRatio")
+        val viewWidth: Int
+        val viewHeight: Int
+
+        if (viewRatio > screenRatio) {
+            // View is wider than screen
+            viewWidth = (maxHeight * screenRatio).toInt()
+            viewHeight = maxHeight
+        } else {
+            // Screen is wider than view
+            viewHeight = (maxWidth / screenRatio).toInt()
+            viewWidth = maxWidth
+        }
+        view.layoutParams = LinearLayout.LayoutParams(viewWidth, viewHeight)
     }
 
     override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {
