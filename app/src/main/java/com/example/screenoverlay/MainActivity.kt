@@ -22,7 +22,8 @@ import android.view.TextureView
 import android.view.View
 import android.widget.LinearLayout
 
-class MainActivity : Activity(), View.OnTouchListener, TextureView.SurfaceTextureListener {
+class MainActivity : Activity(), View.OnTouchListener, TextureView.SurfaceTextureListener,
+    View.OnGenericMotionListener {
     private lateinit var windowManagerService: IInterface
     private lateinit var displayManager: DisplayManager
     private var displayRealHeight: Int = 0
@@ -48,6 +49,7 @@ class MainActivity : Activity(), View.OnTouchListener, TextureView.SurfaceTextur
         setContentView(R.layout.main_activity)
         view = findViewById(R.id.textureView)
         view.setOnTouchListener(this)
+        view.setOnGenericMotionListener(this)
         view.surfaceTextureListener = this
 
         val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
@@ -79,6 +81,11 @@ class MainActivity : Activity(), View.OnTouchListener, TextureView.SurfaceTextur
             return true
         }
         return false
+    }
+
+
+    override fun onGenericMotion(v: View?, event: MotionEvent?): Boolean {
+        return onTouch(v, event)
     }
 
     private fun transformEvent(event: MotionEvent): MotionEvent {
