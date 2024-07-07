@@ -7,9 +7,13 @@ import android.hardware.display.DisplayManager
 import android.hardware.display.DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR
 import android.hardware.display.VirtualDisplay
 import android.os.Bundle
+import android.os.IBinder
+import android.os.IInterface
+import android.os.RemoteException
 import android.preference.PreferenceManager
 import android.util.Log
 import android.view.Display
+import android.view.IRotationWatcher
 import android.view.MotionEvent
 import android.view.MotionEvent.PointerCoords
 import android.view.MotionEvent.PointerProperties
@@ -19,18 +23,24 @@ import android.view.View
 import android.widget.LinearLayout
 
 class MainActivity : Activity(), View.OnTouchListener, TextureView.SurfaceTextureListener {
+    private lateinit var windowManagerService: IInterface
     private lateinit var displayManager: DisplayManager
     private var displayRealHeight: Int = 0
     private var displayRealWidth: Int = 0
     private lateinit var view: TextureView
     private var useInput = false
     private var virtualDisplay: VirtualDisplay? = null
-    val TAG: String = "main_activity"
+    private val TAG: String = "main_activity"
 
 
     override fun onDestroy() {
         super.onDestroy()
         virtualDisplay?.release()
+        
+        windowManagerService.javaClass.getMethod(
+            "removeRotationWatcher",
+            IRotationWatcher::class.java
+        ).invoke(windowManagerService, screenRotationChanged)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,6 +53,8 @@ class MainActivity : Activity(), View.OnTouchListener, TextureView.SurfaceTextur
         val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
         useInput = sharedPreferences.getBoolean("use_input", false)
         Log.i(TAG, "Input enabled: $useInput")
+
+        watchRotation()
     }
 
     override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
@@ -128,5 +140,32 @@ class MainActivity : Activity(), View.OnTouchListener, TextureView.SurfaceTextur
     }
 
     override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {
+    }
+
+    private val screenRotationChanged: IRotationWatcher.Stub = object : IRotationWatcher.Stub() {
+        @Throws(RemoteException::class)
+        override fun onRotationChanged(rotation: Int) {
+            runOnUiThread { recreate() }
+        }
+    }
+    
+    private fun watchRotation() {
+        val serviceManager = Class.forName("android.os.ServiceManager")
+        val serviceBinder = serviceManager.getMethod("getService", String::class.java)
+            .invoke(null, "window") as IBinder
+
+        windowManagerService = Class.forName("android.view.IWindowManager\$Stub")
+            .getMethod("asInterface", IBinder::class.java)
+            .invoke(null, serviceBinder) as IInterface
+
+        windowManagerService.javaClass.getMethod(
+            "watchRotation",
+            IRotationWatcher::class.java,
+            Int::class.javaPrimitiveType
+        ).invoke(
+            windowManagerService,
+            screenRotationChanged,
+            Display.DEFAULT_DISPLAY
+        )
     }
 }
