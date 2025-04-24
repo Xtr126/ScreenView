@@ -3,11 +3,6 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:ignore="ProtectedPermissions,QueryAllPackagesPermission">
 
-    <uses-sdk
-        android:maxSdkVersion="32"
-        android:minSdkVersion="25"
-        android:targetSdkVersion="32"
-        tools:ignore="ExpiredTargetSdkVersion" />
 
     <uses-permission android:name="android.permission.CAPTURE_SECURE_VIDEO_OUTPUT" />
     <uses-permission android:name="android.permission.INJECT_EVENTS" />

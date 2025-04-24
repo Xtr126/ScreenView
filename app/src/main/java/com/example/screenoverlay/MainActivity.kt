@@ -1,6 +1,7 @@
 package com.example.screenoverlay
 
 import android.app.Activity
+import android.content.Intent
 import android.graphics.Point
 import android.graphics.SurfaceTexture
 import android.hardware.display.DisplayManager
@@ -22,6 +23,9 @@ import android.view.TextureView
 import android.view.View
 import android.widget.LinearLayout
 
+
+const val TAG: String = "main_activity"
+
 class MainActivity : Activity(), View.OnTouchListener, TextureView.SurfaceTextureListener,
     View.OnGenericMotionListener {
     private lateinit var windowManagerService: IInterface
@@ -31,21 +35,17 @@ class MainActivity : Activity(), View.OnTouchListener, TextureView.SurfaceTextur
     private lateinit var view: TextureView
     private var useInput = false
     private var virtualDisplay: VirtualDisplay? = null
-    private val TAG: String = "main_activity"
 
-
-    override fun onDestroy() {
-        super.onDestroy()
-        virtualDisplay?.release()
-        
-        windowManagerService.javaClass.getMethod(
-            "removeRotationWatcher",
-            IRotationWatcher::class.java
-        ).invoke(windowManagerService, screenRotationChanged)
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val intent = getIntent()
+
+        if (applyIntentPrefs(intent)) {
+            finish()
+            return
+        }
+
         setContentView(R.layout.main_activity)
         view = findViewById(R.id.textureView)
         view.setOnTouchListener(this)
@@ -57,6 +57,38 @@ class MainActivity : Activity(), View.OnTouchListener, TextureView.SurfaceTextur
         Log.i(TAG, "Input enabled: $useInput")
 
         watchRotation()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (applyIntentPrefs(intent)) {
+            finish()
+        }
+    }
+
+    private fun applyIntentPrefs(intent: Intent): Boolean {
+        val key = intent.getStringExtra("pref_key")
+
+        // Only proceed if both key and boolean extra are present
+        if (key != null && intent.hasExtra("pref_value")) {
+            val value = intent.getBooleanExtra("pref_value", false)
+            PreferenceManager.getDefaultSharedPreferences(this)
+                .edit()
+                .putBoolean(key, value)
+                .apply()
+            return true
+        }
+        return false
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        virtualDisplay?.release()
+
+        windowManagerService.javaClass.getMethod(
+            "removeRotationWatcher",
+            IRotationWatcher::class.java
+        ).invoke(windowManagerService, screenRotationChanged)
     }
 
     override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
